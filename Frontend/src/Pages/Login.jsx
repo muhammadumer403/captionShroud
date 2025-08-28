@@ -1,13 +1,16 @@
 import React, { useState } from "react";
 import AuthForm from "../componets/auth/AuthForm";
 import { useDispatch, useSelector } from "react-redux";
-import { login } from "../utils/redux/slices/AuthSlice";
+import {
+  loginFailure,
+  loginStart,
+  loginSuccess,
+} from "../utils/redux/slices/AuthSlice";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const [errors, setErrors] = useState("");
   const dispatch = useDispatch();
-  const { user, token } = useSelector((state) => state.auth);
+  const { user, token, errors } = useSelector((state) => state.auth);
   const navigate = useNavigate();
   const fields = [
     {
@@ -38,20 +41,31 @@ const Login = () => {
     },
   ];
   const handleSubmit = async (data) => {
+    dispatch(loginStart());
     try {
+      const res = await fetch("https://jsonplaceholder.typicode.com/posts", {
+        method: "POST",
+        headers: {
+          "Content-type": "application/json; charset=UTF-8",
+        },
+        body: JSON.stringify(data),
+      });
+      const json = await res.json();
       dispatch(
-        login({
-          user: data,
-          token: "dummy-token",
+        loginSuccess({
+          user: json,
+          token: "login-dummy-token",
         })
       );
-
-      alert("Login Successful");
+      console.log(json);
       navigate("/upload");
+      alert("welcome back" + json?.email);
+      localStorage.setItem("token", "login-dummy-token");
     } catch (error) {
-      setErrors({ message: "Invalid Credentials" });
+      dispatch(loginFailure({ error: error.message }));
     }
   };
+
   return (
     <div className="flex items-center justify-center !min-h-screen bg-zinc-900  ">
       <AuthForm fields={fields} onSubmit={handleSubmit} />

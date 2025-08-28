@@ -1,4 +1,5 @@
 import { useForm } from "react-hook-form";
+import { useSelector } from "react-redux";
 export default function Auth({ onSubmit, fields }) {
   const {
     register,
@@ -6,6 +7,7 @@ export default function Auth({ onSubmit, fields }) {
     handleSubmit,
     getValues,
   } = useForm();
+  const { loading } = useSelector((state) => state.auth);
   return (
     <>
       <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
@@ -55,10 +57,15 @@ export default function Auth({ onSubmit, fields }) {
 
             <div>
               <button
+                disabled={loading}
                 type="submit"
-                className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                className={`flex w-full ${
+                  !loading
+                    ? " bg-indigo-500"
+                    : "bg-indigo-300 cursor-not-allowed"
+                } justify-center rounded-md  px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 `}
               >
-                Sign in
+                {loading ? "Processing..." : "Sign in"}
               </button>
             </div>
           </form>
