@@ -12,13 +12,14 @@ const SignUp = () => {
   const [errors, setErrors] = useState("");
   const dispatch = useDispatch();
   const { user, token } = useSelector((state) => state.auth);
-const navigate = useNavigate();
-  const fields = [
+  const navigate = useNavigate();
+  const [fields, setFields] = useState([
     {
       name: "username",
       type: "text",
       required: true,
       label: "Username",
+      focused: false,
       validator: {
         required: "Username is required",
         minLength: {
@@ -32,6 +33,8 @@ const navigate = useNavigate();
       type: "email",
       required: true,
       label: "Email",
+      focused: false,
+
       validator: {
         required: "Email is required",
         pattern: {
@@ -45,6 +48,8 @@ const navigate = useNavigate();
       type: "password",
       required: true,
       label: "Password",
+      focused: false,
+
       validator: {
         required: "Password is required",
         minLength: {
@@ -57,10 +62,18 @@ const navigate = useNavigate();
       name: "confirmPassword",
       type: "password",
       required: true,
+      focused: false,
       label: "Confirm Password",
     },
-  ];
-
+  ]);
+  const handleFocus = (id, focus) => {
+    setFields((prev) =>
+      prev.map((field) =>
+        field.name === id ? { ...field, focused: focus } : field
+      )
+    );
+    console.log(fields);
+  };
   const handleSubmit = async (data) => {
     dispatch(loginStart());
     try {
@@ -88,8 +101,8 @@ const navigate = useNavigate();
   };
 
   return (
-    <div className="flex items-center justify-center !min-h-screen bg-zinc-900  ">
-      <AuthForm fields={fields} onSubmit={handleSubmit} />
+    <div className="flex items-center justify-center !min-h-screen bg-primary  max-h-screen overflow-hidden">
+      <AuthForm fields={fields} onSubmit={handleSubmit} handleFocus={handleFocus} />
     </div>
   );
 };

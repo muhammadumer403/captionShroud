@@ -12,12 +12,13 @@ const Login = () => {
   const dispatch = useDispatch();
   const { user, token, errors } = useSelector((state) => state.auth);
   const navigate = useNavigate();
-  const fields = [
+  const [fields, setFields] = useState([
     {
       name: "email",
       type: "email",
       required: true,
       label: "Email",
+      focused: false,
       validator: {
         required: "Email is required",
         pattern: {
@@ -31,6 +32,7 @@ const Login = () => {
       type: "password",
       required: true,
       label: "Password",
+      focused: false,
       validator: {
         required: "Password is required",
         minLength: {
@@ -39,7 +41,7 @@ const Login = () => {
         },
       },
     },
-  ];
+  ]);
   const handleSubmit = async (data) => {
     dispatch(loginStart());
     try {
@@ -65,10 +67,21 @@ const Login = () => {
       dispatch(loginFailure({ error: error.message }));
     }
   };
-
+  const handleFocus = (id, focusInput) => {
+    setFields((prev) =>
+      prev.map((field) =>
+        field.name === id ? { ...field, focused: focusInput } : field
+      )
+    );
+    console.log(fields);
+  };
   return (
-    <div className="flex items-center justify-center !min-h-screen bg-zinc-900  ">
-      <AuthForm fields={fields} onSubmit={handleSubmit} />
+    <div className="flex items-center justify-center !min-h-screen bg-primary max-h-screen overflow-hidden">
+      <AuthForm
+        fields={fields}
+        onSubmit={handleSubmit}
+        handleFocus={handleFocus}
+      />
       {errors && <div className="text-red-600 mt-4">{errors.message}</div>}
     </div>
   );
