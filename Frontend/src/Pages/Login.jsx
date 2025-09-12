@@ -77,6 +77,7 @@ const Login = () => {
   };
   return (
     <div className="flex items-center justify-center !min-h-screen bg-primary max-h-screen overflow-hidden">
+      
       <AuthForm
         fields={fields}
         onSubmit={handleSubmit}

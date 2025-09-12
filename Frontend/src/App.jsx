@@ -14,14 +14,7 @@ function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<SignUp />} />
-      <Route
-        path="/"
-        element={
-          <PrivateRoute>
-            <Body />
-          </PrivateRoute>
-        }
-      >
+      <Route path="/" element={<Body />}>
         <Route path="upload" element={<Upload />} />
         <Route path="preview/:id" element={<Preview />} />
         <Route path="editor/:id" element={<Editor />} />
