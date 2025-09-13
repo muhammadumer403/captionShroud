@@ -1,116 +1,197 @@
 import React, { useState, useRef, useEffect } from "react";
 
-export const Timeline = ({ words, videoState, onSeek, onPenPlace }) => {
+import { TimelineHeader,ScaleMarks,TimelineTrack,TimeDisplay } from "./Timeline/index";
+export const Timeline = ({ words, videoState, onSeek, onWordsUpdate }) => {
   const timelineRef = useRef(null);
   const [penPx, setPenPx] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [draggedWord, setDraggedWord] = useState(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [resizing, setResizing] = useState({ wordId: null, edge: null });
+  
   const maxTime = Math.max(
     ...words.map((w) => w.endTime),
-    videoState.duration || 10
+    videoState.duration || 10,
+    20
   );
 
-  const getTimeFromPx = (px) =>
-    (px / timelineRef.current.offsetWidth) * maxTime;
+  // Helper functions
+  const getTimeFromPx = (px) => {
+    if (!timelineRef.current) return 0;
+    return Math.max(0, (px / timelineRef.current.offsetWidth) * maxTime);
+  };
 
-  const handleMouseDown = (e) => {
+  const getPxFromTime = (time) => {
+    if (!timelineRef.current) return 0;
+    return (time / maxTime) * timelineRef.current.offsetWidth;
+  };
+
+  // Event Handlers
+  const handlePenMouseDown = (e) => {
+    e.stopPropagation();
     setDragging(true);
     movePen(e);
   };
 
-  const handleMouseMove = (e) => {
-    if (!dragging) return;
-    movePen(e);
-  };
-
-  const handleMouseUp = () => {
-    if (dragging) {
-      setDragging(false);
-      if (onPenPlace) onPenPlace(getTimeFromPx(penPx));
-    }
-  };
-
   const movePen = (e) => {
+    if (!timelineRef.current) return;
     const rect = timelineRef.current.getBoundingClientRect();
     const x = Math.min(Math.max(e.clientX - rect.left, 0), rect.width);
     setPenPx(x);
-    if (onSeek) onSeek(getTimeFromPx(x));
+    const time = getTimeFromPx(x);
+    if (onSeek) onSeek(time);
+  };
+
+  const handleWordMouseDown = (e, word) => {
+    e.stopPropagation();
+    const rect = timelineRef.current.getBoundingClientRect();
+    const wordStartPx = getPxFromTime(word.startTime);
+    setDragOffset(e.clientX - rect.left - wordStartPx);
+    setDraggedWord({ 
+      ...word, 
+      originalStartTime: word.startTime, 
+      originalEndTime: word.endTime 
+    });
+  };
+
+  const handleWordDrag = (e) => {
+    if (!draggedWord || !timelineRef.current) return;
+    
+    const rect = timelineRef.current.getBoundingClientRect();
+    const newStartPx = Math.max(0, e.clientX - rect.left - dragOffset);
+    const newStartTime = getTimeFromPx(newStartPx);
+    const duration = draggedWord.originalEndTime - draggedWord.originalStartTime;
+    const newEndTime = newStartTime + duration;
+    
+    setDraggedWord({
+      ...draggedWord,
+      startTime: Math.max(0, newStartTime),
+      endTime: Math.max(duration, newEndTime)
+    });
+  };
+
+  const finalizeDraggedWord = () => {
+    if (!draggedWord || !onWordsUpdate) return;
+    
+    const updatedWords = words.map(word =>
+      word.id === draggedWord.id
+        ? {
+            ...word,
+            startTime: Math.round(draggedWord.startTime * 10) / 10,
+            endTime: Math.round(draggedWord.endTime * 10) / 10
+          }
+        : word
+    );
+    
+    onWordsUpdate(updatedWords);
+    setDraggedWord(null);
+    setDragOffset(0);
+  };
+
+  const handleResizeMouseDown = (e, wordId, edge) => {
+    e.stopPropagation();
+    setResizing({ wordId, edge });
+  };
+
+  const handleWordResize = (e) => {
+    if (!resizing.wordId || !onWordsUpdate) return;
+    
+    const time = getTimeFromPx(e.clientX - timelineRef.current.getBoundingClientRect().left);
+    const updatedWords = words.map(word => {
+      if (word.id === resizing.wordId) {
+        if (resizing.edge === 'left') {
+          return {
+            ...word,
+            startTime: Math.max(0, Math.min(time, word.endTime - 0.1))
+          };
+        } else if (resizing.edge === 'right') {
+          return {
+            ...word,
+            endTime: Math.max(word.startTime + 0.1, time)
+          };
+        }
+      }
+      return word;
+    });
+    
+    onWordsUpdate(updatedWords);
+  };
+
+  const handleTimelineClick = (e) => {
+    if (e.target === timelineRef.current) {
+      const time = getTimeFromPx(e.clientX - timelineRef.current.getBoundingClientRect().left);
+      if (onSeek) onSeek(time);
+      setPenPx(getPxFromTime(time));
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (dragging) {
+      movePen(e);
+    } else if (draggedWord) {
+      handleWordDrag(e);
+    } else if (resizing.wordId) {
+      handleWordResize(e);
+    }
+  };
+
+  const handleMouseUp = (e) => {
+    if (dragging) {
+      setDragging(false);
+      const time = getTimeFromPx(penPx);
+      if (onSeek) onSeek(time);
+    }
+    
+    if (draggedWord) {
+      finalizeDraggedWord();
+    }
+    
+    if (resizing.wordId) {
+      setResizing({ wordId: null, edge: null });
+    }
   };
 
   // Sync pen with video
   useEffect(() => {
     if (!dragging && timelineRef.current) {
-      setPenPx(
-        (videoState.currentTime / maxTime) * timelineRef.current.offsetWidth
-      );
+      setPenPx(getPxFromTime(videoState.currentTime));
     }
-  }, [videoState.currentTime, dragging, timelineRef.current?.offsetWidth]);
-
-  // Generate scale marks
-  const numMarks = 10; // 10 divisions
-  const scaleMarks = Array.from({ length: numMarks + 1 }, (_, i) => {
-    const time = (i / numMarks) * maxTime;
-    const left = (i / numMarks) * 100;
-    return { time, left };
-  });
+  }, [videoState.currentTime, dragging, maxTime]);
 
   return (
     <div
-      className="bg-gray-900/50 border border-cyan-500/30 rounded-xl p-6 fixed bottom-0 left-1/2 transform -translate-x-1/2 w-11/12 mb-6 z-50"
+      className="bg-gray-900/50 backdrop-blur-sm border border-cyan-500/30 rounded-xl p-6 w-full max-w-[90vw] -translate-x-1/2 left-1/2 fixed bottom-0"
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
-      <h2 className="text-xl font-bold text-cyan-300 mb-4">Timeline</h2>
-      <div
-        ref={timelineRef}
-        className="relative bg-gray-800 rounded-lg h-20 overflow-hidden cursor-crosshair"
-        onMouseDown={handleMouseDown}
-      >
+      {/* Header with Legend */}
+      <TimelineHeader maxTime={maxTime} />
+
+      <div className="relative">
         {/* Scale Marks */}
-        {scaleMarks.map((mark, i) => (
-          <div
-            key={i}
-            className="absolute -top-4 w-px h-2 bg-gray-400"
-            style={{ left: `${mark.left}%` }}
-          >
-            <div className="absolute -top-4 -translate-x-1/2 text-xs text-gray-300">
-              {mark.time.toFixed(1)}s
-            </div>
-          </div>
-        ))}
+        <ScaleMarks maxTime={maxTime} />
 
-        {/* Word Blocks */}
-        {words.map((word) => (
-          <div
-            key={word.id}
-            className="absolute top-2 bottom-2 rounded-md flex items-center justify-center text-white text-xs font-medium"
-            style={{
-              left: `${(word.startTime / maxTime) * 100}%`,
-              width: `${((word.endTime - word.startTime) / maxTime) * 100}%`,
-              backgroundColor: word.color,
-              minWidth: "40px",
-            }}
-          >
-            {word.text}
-          </div>
-        ))}
-
-        {/* Playback Indicator */}
-        <div
-          className="absolute top-0 bottom-0 w-1 bg-cyan-500"
-          style={{ left: `${(videoState.currentTime / maxTime) * 100}%` }}
+        {/* Main Timeline Track */}
+        <TimelineTrack
+          timelineRef={timelineRef}
+          maxTime={maxTime}
+          words={words}
+          currentTime={videoState.currentTime}
+          penPx={penPx}
+          draggedWord={draggedWord}
+          onTimelineClick={handleTimelineClick}
+          onWordMouseDown={handleWordMouseDown}
+          onResizeMouseDown={handleResizeMouseDown}
+          onPenMouseDown={handlePenMouseDown}
         />
-       
-        {/* Pen Tool */}
-        <div
-          className="absolute top-0 bottom-0 w-1 bg-orange-400"
-          style={{ left: penPx }}
-        >
-            
-          <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-5 h-5 bg-orange-500 border-2 border-white rounded-full shadow-lg cursor-grab" />
-        </div>
-        
+
+        {/* Time Display */}
+        <TimeDisplay 
+          currentTime={videoState.currentTime} 
+          penTime={getTimeFromPx(penPx)} 
+        />
       </div>
-      
     </div>
   );
 };
