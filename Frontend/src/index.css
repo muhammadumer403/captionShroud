@@ -4,7 +4,14 @@
   --font-raleway: "Raleway", sans-serif;
   --font-orbitron: "Orbitron", sans-serif;
   --color-primary: #002027;
-  --color-secondary: #002F3A;
-  --color-heading:#008B9F;
-  --color-btn:#008B9F;
+  --color-secondary: #002f3a;
+  --color-heading: #008b9f;
+  --color-btn: #008b9f;
+}
+::-webkit-scrollbar {
+  background-color: #444;
+}
+::-webkit-scrollbar-thumb {
+  background-color: #888;
+  border-radius: 10px;
 }

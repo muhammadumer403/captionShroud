@@ -19,7 +19,7 @@ export default function TimelineTrack ({
   return (
     <div
       ref={timelineRef}
-      className="relative bg-gray-800 rounded-lg h-20 overflow-hidden cursor-crosshair select-none"
+      className="relative bg-gray-800 rounded-lg h-20 overflow-hidden cursor-crosshair select-none "
       onClick={onTimelineClick}
     >
       {/* Grid Lines */}

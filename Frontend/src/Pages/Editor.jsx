@@ -71,7 +71,7 @@ function Editor() {
         </div>
 
         {/* Top Section - Words Panel & Video Player */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-96">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-fit ">
           <WordsPanel
             words={words}
             currentTime={videoState.currentTime}
